@@ -1,0 +1,373 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Airtek Cloud - Sistema de Evaluación</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    
+    <!-- FIREBASE COMPAT LIBRARIES -->
+    <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-auth-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore-compat.js"></script>
+
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;600;800;900&display=swap');
+        body { font-family: 'Inter', sans-serif; background-color: #020617; color: #f8fafc; -webkit-tap-highlight-color: transparent; }
+        
+        @media print {
+            .no-print { display: none !important; }
+            body { background: white !important; color: black !important; }
+            #print-report { display: block !important; }
+            .card-border { border: 1px solid #ccc; padding: 10px; margin-bottom: 5px; border-radius: 5px; break-inside: avoid; }
+        }
+        #print-report { display: none; }
+
+        .glass { background: rgba(30, 41, 59, 0.7); backdrop-filter: blur(10px); border: 1px solid rgba(255, 255, 255, 0.1); }
+        input, select, textarea { background: #0f172a; border: 1px solid #334155; color: white; padding: 14px; border-radius: 12px; width: 100%; outline: none; transition: 0.3s; }
+        input:focus { border-color: #3b82f6; box-shadow: 0 0 0 2px rgba(59, 130, 246, 0.2); }
+        .btn-primary { background: #2563eb; color: white; transition: 0.2s; }
+        .btn-primary:active { transform: scale(0.97); }
+        
+        .loader { border: 3px solid rgba(255,255,255,0.3); border-top: 3px solid #fff; border-radius: 50%; width: 16px; height: 16px; animation: spin 1s linear infinite; display: inline-block; }
+        @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
+    </style>
+</head>
+<body>
+
+    <!-- Estado de Conexión -->
+    <div id="status-bar" class="fixed bottom-4 right-4 z-[100] flex items-center gap-2 bg-slate-900 px-3 py-1.5 rounded-full border border-slate-700 shadow-xl no-print transition-all">
+        <div id="status-dot" class="w-2 h-2 rounded-full bg-yellow-500 animate-pulse"></div>
+        <span id="status-text" class="text-[9px] font-black tracking-widest text-slate-400">CONECTANDO...</span>
+    </div>
+
+    <!-- UI -->
+    <div id="app-container" class="min-h-screen pb-20 no-print">
+        <header class="p-5 flex justify-between items-center bg-[#020617]/90 sticky top-0 z-50 border-b border-white/5 backdrop-blur-xl">
+            <div>
+                <h1 class="text-lg font-black tracking-tighter text-white">AIRTEK <span class="text-blue-500">CLOUD</span></h1>
+                <p class="text-[8px] font-bold text-slate-500 uppercase tracking-widest">Sistema Centralizado v2.1</p>
+            </div>
+            <button onclick="toggleAdmin()" class="bg-slate-800 p-2.5 rounded-xl border border-slate-700 hover:bg-slate-700 transition-colors">
+                <svg class="w-5 h-5 text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z"/></svg>
+            </button>
+        </header>
+
+        <main class="p-4 max-w-xl mx-auto space-y-6">
+            
+            <!-- LOGIN / HOME -->
+            <section id="s-home" class="space-y-4 pt-2">
+                <div class="glass p-6 rounded-[2rem] space-y-5 border-t border-white/10 shadow-2xl">
+                    <div class="flex items-center gap-2">
+                        <div class="bg-blue-600 w-1 h-4 rounded-full"></div>
+                        <h2 class="text-xs font-black text-slate-300 uppercase tracking-widest">Perfil del Candidato</h2>
+                    </div>
+                    <input id="in-name" type="text" placeholder="Nombre y Apellido">
+                    <input id="in-id" type="tel" placeholder="Cédula de Identidad">
+                    <input id="in-job" type="text" placeholder="Cargo Postulado">
+                    
+                    <div class="pt-4 border-t border-white/5">
+                        <div class="flex items-center gap-2 mb-2">
+                            <div class="bg-slate-600 w-1 h-4 rounded-full"></div>
+                            <label class="text-[10px] text-slate-400 font-bold uppercase">Supervisor Responsable</label>
+                        </div>
+                        <input id="in-eval" type="text" value="Diego Chacin">
+                    </div>
+
+                    <button onclick="startApp()" class="w-full btn-primary py-4 rounded-xl font-black shadow-lg shadow-blue-600/20 uppercase tracking-wide text-sm">Iniciar Evaluación</button>
+                </div>
+            </section>
+
+            <!-- EXAMEN -->
+            <section id="s-exam" class="hidden space-y-4">
+                <div class="sticky top-20 z-40 bg-[#020617]/95 py-3 border-b border-white/5 backdrop-blur-md">
+                    <div class="flex justify-between text-xs font-bold uppercase text-slate-400 px-2 mb-1">
+                        <span>Progreso</span>
+                        <span id="txt-prog" class="text-blue-500 font-black">0/20</span>
+                    </div>
+                    <div class="h-1.5 w-full bg-slate-800 rounded-full overflow-hidden">
+                        <div id="bar-prog" class="h-full bg-blue-600 w-0 transition-all duration-300 ease-out"></div>
+                    </div>
+                </div>
+                <div id="list-q" class="space-y-5 pb-4"></div>
+                <button id="btn-send" onclick="submitData()" class="w-full btn-primary py-5 rounded-2xl font-black text-sm uppercase shadow-xl tracking-wider">
+                    Finalizar y Guardar
+                </button>
+            </section>
+
+            <!-- RESULTADO -->
+            <section id="s-result" class="hidden text-center py-8">
+                <div class="glass p-10 rounded-[2.5rem] border border-blue-500/30 mb-6 relative overflow-hidden">
+                    <div class="absolute inset-0 bg-blue-600/5 blur-xl"></div>
+                    <div class="relative z-10">
+                        <div class="w-28 h-28 mx-auto rounded-full bg-[#020617] border-4 border-blue-600 flex items-center justify-center text-5xl font-black text-white mb-4 shadow-[0_0_30px_rgba(37,99,235,0.4)]">
+                            <span id="res-score">0</span>
+                        </div>
+                        <h2 class="text-2xl font-black text-white uppercase tracking-tight">¡Datos en la Nube!</h2>
+                        <p class="text-slate-400 text-xs mt-2 px-4">La evaluación ha sido sincronizada con el servidor central.</p>
+                    </div>
+                </div>
+                <div class="grid grid-cols-2 gap-4">
+                    <button onclick="window.print()" class="bg-slate-800 hover:bg-slate-700 text-white p-4 rounded-2xl font-bold text-xs uppercase border border-white/5 transition-all flex flex-col items-center gap-2">Imprimir Reporte</button>
+                    <button onclick="location.reload()" class="bg-blue-600 hover:bg-blue-500 text-white p-4 rounded-2xl font-bold text-xs uppercase shadow-lg shadow-blue-600/20 transition-all flex flex-col items-center gap-2">Siguiente</button>
+                </div>
+                <div id="res-detail" class="text-left mt-10 space-y-3"></div>
+            </section>
+
+            <!-- PANEL ADMIN -->
+            <section id="s-admin" class="hidden space-y-4 pt-2">
+                <div class="flex justify-between items-center bg-slate-900 p-4 rounded-2xl border border-slate-800">
+                    <div>
+                        <h2 class="text-xs font-black text-white uppercase tracking-widest">Panel Supervisor</h2>
+                        <p class="text-[9px] text-slate-500 mt-1">Conexión: <span class="text-green-500 font-bold">ESTABLE</span></p>
+                    </div>
+                    <button onclick="exitAdmin()" class="text-red-400 text-[10px] font-bold px-4 py-2 bg-red-500/10 rounded-lg border border-red-500/20 hover:bg-red-500/20 transition-colors">SALIR</button>
+                </div>
+                <div class="flex gap-2 p-1.5 bg-slate-900 rounded-xl border border-white/5">
+                    <button onclick="viewAdmin('history')" id="tab-hist" class="flex-1 py-2.5 rounded-lg text-[10px] font-black uppercase bg-blue-600 text-white shadow-lg transition-all">Historial</button>
+                    <button onclick="viewAdmin('editor')" id="tab-edit" class="flex-1 py-2.5 rounded-lg text-[10px] font-black uppercase text-slate-500 hover:text-white transition-all">Config</button>
+                </div>
+                <div id="view-hist" class="space-y-3 max-h-[60vh] overflow-y-auto pb-10"></div>
+                <div id="view-edit" class="hidden space-y-4 pb-10">
+                    <div class="bg-yellow-500/10 border border-yellow-500/20 p-4 rounded-xl">
+                        <p class="text-[10px] text-yellow-500 font-bold">⚠️ Atención: Los cambios se replican en todos los dispositivos.</p>
+                    </div>
+                    <button onclick="saveConfig()" class="w-full bg-green-600 hover:bg-green-500 py-3 rounded-xl font-black text-xs uppercase shadow-lg transition-all">Guardar Cambios</button>
+                    <div id="edit-list" class="space-y-4"></div>
+                </div>
+            </section>
+        </main>
+    </div>
+
+    <!-- REPORTE PDF -->
+    <div id="print-report" class="p-8">
+        <div style="border-bottom: 3px solid #2563eb; padding-bottom: 20px; margin-bottom: 25px; display: flex; justify-content: space-between;">
+            <div><h1 style="font-size: 24pt; font-weight: 900; color: #2563eb; margin:0;">AIRTEK</h1><p style="font-size: 10pt; font-weight: bold; color: #666; letter-spacing: 1px;">ENERGÍA Y MONITOREO</p></div>
+            <div style="text-align: right;"><h2 style="font-size: 14pt; font-weight: 900; margin:0;">REPORTE TÉCNICO</h2><p id="pr-date" style="font-size: 10pt;"></p></div>
+        </div>
+        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 20px; background: #f8fafc; padding: 25px; border-radius: 15px; border: 1px solid #e2e8f0; margin-bottom: 30px;">
+            <div><p style="font-size: 8pt; color: #94a3b8; font-weight: 900; margin-bottom: 5px;">CANDIDATO</p><p id="pr-cand" style="font-size: 12pt; font-weight: 900; text-transform: uppercase;"></p><p id="pr-id" style="font-size: 10pt; font-family: monospace;"></p><p id="pr-job" style="font-size: 10pt; margin-top: 2px;"></p></div>
+            <div style="text-align: right;"><p style="font-size: 8pt; color: #94a3b8; font-weight: 900; margin-bottom: 5px;">SUPERVISOR</p><p id="pr-eval" style="font-size: 12pt; font-weight: 900; text-transform: uppercase;"></p><p style="font-size: 18pt; font-weight: 900; color: #2563eb; margin-top: 10px;">NOTA: <span id="pr-score"></span>/20</p></div>
+        </div>
+        <div id="pr-list" style="font-size: 10pt;"></div>
+        <div style="margin-top: 60px; display: grid; grid-template-columns: 1fr 1fr; gap: 60px; text-align: center;">
+            <div style="border-top: 2px solid #000; padding-top: 10px;"><p style="font-size: 8pt; font-weight: 900;">FIRMA DEL CANDIDATO</p></div>
+            <div style="border-top: 2px solid #000; padding-top: 10px;"><p style="font-size: 8pt; font-weight: 900;">FIRMA DEL SUPERVISOR</p></div>
+        </div>
+    </div>
+
+    <script>
+        // ==========================================================
+        // CONFIGURACIÓN DE FIREBASE
+        // Sustituye todo el bloque de abajo con lo que copiaste en Firebase Console
+        // ==========================================================
+        const firebaseConfig = {
+            apiKey: "AIzaSyAQk7SmO2BJQl_Bnx-87Sw07ivn5_17njo",
+            authDomain: "airtek-system.firebaseapp.com",
+            projectId: "airtek-system",
+            storageBucket: "airtek-system.firebasestorage.app",
+            messagingSenderId: "721754246724",
+            appId: "1:721754246724:web:a38a0b57e3f364d7947611"
+        };
+        // ==========================================================
+
+        const appId = 'airtek-produccion'; 
+        const ADMIN_PASS = "885500";
+        let db, auth;
+
+        // Preguntas por defecto (Respaldo)
+        let questions = [
+            { id: 1, text: "¿Qué se debe tomar en cuenta para calcular la carga conectada en las fuentes Huawei ETP23006?", options: [{id:'a',text:"Carga mostrada en la entrada AC"},{id:'b',text:"Banco cargado, Inversores, Rectificadores y SSU"},{id:'c',text:"Banco descargado, Inversores, Rectificadores y SSU"},{id:'d',text:"Carga mostrada en los inversores"}], correct: 'b' },
+            { id: 2, text: "¿Voltaje máximo que puede operar la batería Pylontech US5000 según el manual?", options: [{id:'a',text:"50 V"},{id:'b',text:"48 V"},{id:'c',text:"53.5 V"},{id:'d',text:"51 V"}], correct: 'c' },
+            { id: 3, text: "¿Cuáles son las etapas de carga de una batería?", options: [{id:'a',text:"Absorción, flotación y carga inicial"},{id:'b',text:"Descarga, reposo y ecualización"},{id:'c',text:"Saturación, corte por voltaje y temperatura"},{id:'d',text:"Corriente constante, voltaje variable e inducción"}], correct: 'a' },
+            { id: 4, text: "Para calcular la autonomía de un banco de baterías, ¿qué se debe tomar en cuenta?", options: [{id:'a',text:"Voltaje máximo de operación, carga conectada, ciclos de vida de la batería."},{id:'b',text:"Estado de salud del banco, profundidad de descarga, amperios horas nominal."},{id:'c',text:"Voltaje nominal, amperios horas nominal, profundidad de descarga, carga conectada, factores de conversión, temperatura y estado de salud."},{id:'d',text:"Carga conectada, voltaje nominal y factor de conversión."}], correct: 'c' },
+            { id: 5, text: "En caso de que un módulo Deep Sea no ingrese desde el programa pero sí se le puede hacer ping y entrar a la web, ¿qué se debe hacer antes de informar?", options: [{id:'a',text:"Nada, informar inmediatamente."},{id:'b',text:"Formatear el módulo."},{id:'c',text:"Resetear el módulo."},{id:'d',text:"Obviar lo visto porque no es nada de gravedad."}], correct: 'c' },
+            { id: 6, text: "En caso de ocurrir un apagón general (Blackout), ¿qué se debe hacer?", options: [{id:'a',text:"Nada, esperar que todo normalice."},{id:'b',text:"Validar el documento orientado al blackout e informar a los involucrados."},{id:'c',text:"Solo llamar a tu supervisor inmediato."},{id:'d',text:"Solo registrar el evento en el registro."}], correct: 'b' },
+            { id: 7, text: "¿Desde qué plataforma se puede observar la carga conectada de los inversores MPP Solar?", options: [{id:'a',text:"Solar Guardian"},{id:'b',text:"Shinephone"},{id:'c',text:"Plataforma Growatt"},{id:'d',text:"WatchPower"}], correct: 'd' },
+            { id: 8, text: "Para poder verificar el porcentaje real de una batería Pylontech en un Victron, ¿qué equipo debe estar conectado?", options: [{id:'a',text:"Cerbo GX"},{id:'b',text:"Módulo Wifi genérico"},{id:'c',text:"No es posible ya que no es compatible con el equipo"},{id:'d',text:"Módulo SMU"}], correct: 'a' },
+            { id: 9, text: "¿A qué nivel de voltaje mínimo del banco de baterías de LFP (Litio) debe el personal operativo dirigirse al nodo a validar una posible afectación?", options: [{id:'a',text:"57 V"},{id:'b',text:"52 V"},{id:'c',text:"47 V"},{id:'d',text:"49 V"}], correct: 'd' },
+            { id: 10, text: "La alarma \"AC-PTOFIJO-INV01 APAGADO\" ¿se debe a que...?", options: [{id:'a',text:"El inversor perdió entrada AC."},{id:'b',text:"Falso positivo."},{id:'c',text:"Inversor sin salida AC."},{id:'d',text:"Planta en reposo."}], correct: 'c' },
+            { id: 11, text: "En las fuentes Huawei ETP23006, ¿cuántos módulos SSU pueden conectarse en la segunda fila?", options: [{id:'a',text:"2"},{id:'b',text:"3"},{id:'c',text:"1"},{id:'d',text:"5"}], correct: 'a' },
+            { id: 12, text: "Aparte de los inversores, fuentes y plantas eléctricas, ¿qué es importante monitorear en un nodo?", options: [{id:'a',text:"Cámaras"},{id:'b',text:"Climatización"},{id:'c',text:"Movimiento en sitio"},{id:'d',text:"Equipos de redes"}], correct: 'b' },
+            { id: 13, text: "¿Cuál es la función de los Módulos DSE855?", options: [{id:'a',text:"Monitoreo y control remoto de las Plantas Eléctricas"},{id:'b',text:"Monitoreo de las fuentes ETP23006"},{id:'c',text:"Monitoreo de los inversores Growatt"},{id:'d',text:"Monitoreo de los módulos solares"}], correct: 'a' },
+            { id: 14, text: "¿A qué nivel de voltaje mínimo del banco de baterías de Litio NMC debe el personal operativo dirigirse al nodo a validar una posible afectación?", options: [{id:'a',text:"57 V"},{id:'b',text:"45 V"},{id:'c',text:"51 V"},{id:'d',text:"54 V"}], correct: 'c' },
+            { id: 15, text: "¿A qué nivel de voltaje mínimo del banco de baterías de gel 4S al cual el personal operativo debe dirigirse al nodo a validar una posible afectación?", options: [{id:'a',text:"54 V"},{id:'b',text:"51 V"},{id:'c',text:"42 V"},{id:'d',text:"49 V"}], correct: 'd' },
+            { id: 16, text: "Si la frecuencia o el voltaje de los inversores están fuera del rango de operación (observado en Grafana) ¿qué ocurre?", options: [{id:'a',text:"Nada, puede operar con normalidad."},{id:'b',text:"Se desconecta de la entrada AC y no carga el banco de baterías."},{id:'c',text:"Se desconecta de la entrada AC y sigue cargando el banco de baterías."},{id:'d',text:"Inversor se apaga."}], correct: 'b' },
+            { id: 17, text: "Si una planta eléctrica no enciende en su tiempo de delay y ya se verificó en el Deep Sea que está alarmada ¿Qué se debe hacer?", options: [{id:'a',text:"Informar a soporte IP"},{id:'b',text:"Validar paneles solares"},{id:'c',text:"Informar a personal operativo y al grupo creado llamado \"Eventualidades grupo electrógeno\"."},{id:'d',text:"Informar a personal operativo y personal de redes"}], correct: 'c' },
+            { id: 18, text: "Cada vez que se inicia guardia, ¿cuál es el procedimiento a seguir?", options: [{id:'a',text:"Informarle a tu supervisor el inicio de guardia."},{id:'b',text:"Nada, continuar con la guardia con normalidad."},{id:'c',text:"Verificar el reporte y realizar recorrido de la sede, y aplicar la revisión pertinente de todo."},{id:'d',text:"Solo firmar el libro de novedades sin revisar nada."}], correct: 'c' },
+            { id: 19, text: "Si el personal de soporte IP o clientes dedicados informa que una de las fuentes está apagada, ¿cómo se validaría que no están apagados por completo los equipos de redes?", options: [{id:'a',text:"Verificar en Solar Guardian los equipos conectados e informar al supervisor inmediato."},{id:'b',text:"Verificar en el grupo de Telegram todas las alarmas para validar los equipos de redes e informar al grupo de \"eventualidades foráneos\"."},{id:'c',text:"Validar plataforma de inversores / Fuentes e informar al supervisor inmediato de ser necesario."},{id:'d',text:"Nada porque es algo que ocurre normalmente."}], correct: 'c' },
+            { id: 20, text: "¿De enviar un evento donde se ve afectado un Nodo por el grupo de Averías Mayores, qué se debe hacer?", options: [{id:'a',text:"Nada"},{id:'b',text:"Verificar los mensajes predeterminados para enviar el que esté acorde a lo reportado y notificar a supervisor."},{id:'c',text:"Informar solo a la dirección sobre la situación"},{id:'d',text:"Informar a Soporte IP"}], correct: 'b' }
+        ];
+        let userAnswers = {};
+        
+        // --- INICIALIZACIÓN ---
+        try {
+            if(!firebaseConfig.apiKey) throw new Error("Configura Firebase primero");
+            firebase.initializeApp(firebaseConfig);
+            db = firebase.firestore();
+            auth = firebase.auth();
+            
+            const statusDot = document.getElementById('status-dot');
+            const statusText = document.getElementById('status-text');
+
+            auth.onAuthStateChanged(user => {
+                if(user) {
+                    statusDot.className = "w-2 h-2 rounded-full bg-green-500 shadow-[0_0_10px_rgba(34,197,94,0.5)]";
+                    statusText.textContent = "EN LÍNEA";
+                    // Cargar preguntas desde la nube
+                    db.doc(`artifacts/${appId}/public/data/config/main`).get()
+                    .then(doc => { if(doc.exists() && doc.data().questions) questions = doc.data().questions; })
+                    .catch(e => console.log("Usando local"));
+                } else {
+                    auth.signInAnonymously().catch(e => console.error(e));
+                }
+            });
+        } catch(e) {
+            console.warn("Modo sin conexión o sin configuración");
+            document.getElementById('status-dot').className = "w-2 h-2 rounded-full bg-red-500";
+            document.getElementById('status-text').textContent = "OFFLINE";
+        }
+
+        // --- FUNCIONES UI ---
+        function startApp() {
+            if(!document.getElementById('in-name').value) return alert("Faltan datos");
+            document.getElementById('s-home').classList.add('hidden');
+            document.getElementById('s-exam').classList.remove('hidden');
+            renderQuestions();
+            updateProgress();
+        }
+
+        function renderQuestions() {
+            document.getElementById('list-q').innerHTML = questions.map((q, i) => `
+                <div class="glass p-5 rounded-2xl space-y-4 animate-in">
+                    <h3 class="text-xs font-black text-white uppercase"><span class="text-blue-500 mr-2">#${i+1}</span>${q.text}</h3>
+                    <div class="space-y-2">
+                        ${q.options.map(opt => `
+                            <button onclick="selectOpt(${q.id}, '${opt.id}')" id="btn-${q.id}-${opt.id}" class="w-full text-left p-4 rounded-xl bg-slate-900/50 border border-white/5 text-[11px] font-bold text-slate-300 hover:bg-slate-800 transition-all active:scale-95">
+                                <span class="text-blue-500 mr-2 uppercase">${opt.id})</span> ${opt.text}
+                            </button>
+                        `).join('')}
+                    </div>
+                </div>`).join('');
+        }
+
+        function selectOpt(qId, optId) {
+            userAnswers[qId] = optId;
+            updateProgress();
+            questions.find(q => q.id === qId).options.forEach(o => {
+                const btn = document.getElementById(`btn-${qId}-${o.id}`);
+                btn.className = o.id === optId 
+                    ? "w-full text-left p-4 rounded-xl bg-blue-600/20 border border-blue-500 text-[11px] font-bold text-white transition-all shadow-lg shadow-blue-900/20"
+                    : "w-full text-left p-4 rounded-xl bg-slate-900/50 border border-white/5 text-[11px] font-bold text-slate-300 hover:bg-slate-800 transition-all opacity-60";
+            });
+        }
+
+        function updateProgress() {
+            const c = Object.keys(userAnswers).length;
+            const p = (c / questions.length) * 100;
+            document.getElementById('txt-prog').innerText = `${c}/${questions.length}`;
+            document.getElementById('bar-prog').style.width = `${p}%`;
+        }
+
+        function submitData() {
+            if (Object.keys(userAnswers).length < questions.length && !confirm("Faltan preguntas. ¿Enviar?")) return;
+            const btn = document.getElementById('btn-send');
+            btn.disabled = true; btn.innerText = "GUARDANDO...";
+            
+            let score = 0;
+            questions.forEach(q => { if(userAnswers[q.id] === q.correct) score++; });
+            
+            const payload = {
+                nombre: document.getElementById('in-name').value,
+                cedula: document.getElementById('in-id').value,
+                cargo: document.getElementById('in-job').value,
+                evaluador: document.getElementById('in-eval').value,
+                score, total: questions.length, respuestas: userAnswers, timestamp: Date.now()
+            };
+
+            if(db) {
+                db.collection(`artifacts/${appId}/public/data/results`).add(payload)
+                .then(() => showResult(score, payload))
+                .catch(e => { alert("Error nube: " + e.message); btn.disabled = false; btn.innerText = "REINTENTAR"; });
+            } else {
+                alert("Sin conexión a base de datos. No se guardará el historial global.");
+                showResult(score, payload);
+            }
+        }
+
+        function showResult(score, data) {
+            document.getElementById('s-exam').classList.add('hidden');
+            document.getElementById('s-result').classList.remove('hidden');
+            document.getElementById('res-score').innerText = score;
+            document.getElementById('res-detail').innerHTML = questions.map((q,i) => {
+                const ok = userAnswers[q.id] === q.correct;
+                return `<div class="p-3 rounded-lg border ${ok?'border-green-500/30 bg-green-900/10':'border-red-500/30 bg-red-900/10'} text-xs">
+                    <p class="font-bold text-slate-300 mb-1"><span class="${ok?'text-green-500':'text-red-500'}">#${i+1}</span> ${q.text}</p>
+                    <p class="text-slate-500">R: <span class="${ok?'text-green-400':'text-red-400'} font-bold">${q.options.find(o=>o.id===userAnswers[q.id])?.text || '---'}</span></p>
+                    ${!ok ? `<p class="text-green-600 font-bold mt-1 text-[10px]">Correcta: ${q.options.find(o=>o.id===q.correct).text}</p>` : ''}
+                </div>`;
+            }).join('');
+            
+            // Llenar Reporte
+            document.getElementById('pr-date').innerText = new Date().toLocaleDateString();
+            document.getElementById('pr-cand').innerText = data.nombre;
+            document.getElementById('pr-id').innerText = data.cedula;
+            document.getElementById('pr-job').innerText = data.cargo;
+            document.getElementById('pr-eval').innerText = data.evaluador;
+            document.getElementById('pr-score').innerText = score;
+            document.getElementById('pr-list').innerHTML = questions.map((q,i) => {
+                const ok = userAnswers[q.id] === q.correct;
+                return `<div class="card-border"><p><strong>${i+1}. ${q.text}</strong></p><p style="color:${ok?'green':'red'}">R: ${q.options.find(o=>o.id===userAnswers[q.id])?.text||'---'}</p></div>`;
+            }).join('');
+        }
+
+        // --- ADMIN ---
+        function toggleAdmin() {
+            if(prompt("Clave:") === ADMIN_PASS) {
+                document.getElementById('s-home').classList.add('hidden');
+                document.getElementById('s-exam').classList.add('hidden');
+                document.getElementById('s-result').classList.add('hidden');
+                document.getElementById('s-admin').classList.remove('hidden');
+                viewAdmin('history');
+            }
+        }
+        function exitAdmin() {
+            document.getElementById('s-admin').classList.add('hidden');
+            document.getElementById('s-home').classList.remove('hidden');
+        }
+        function viewAdmin(tab) {
+            document.getElementById('view-hist').classList.add('hidden');
+            document.getElementById('view-edit').classList.add('hidden');
+            if(tab === 'history') {
+                document.getElementById('view-hist').classList.remove('hidden');
+                if(db) {
+                    db.collection(`artifacts/${appId}/public/data/results`).orderBy('timestamp', 'desc').onSnapshot(snap => {
+                        document.getElementById('view-hist').innerHTML = snap.docs.map(d => {
+                            const r = d.data();
+                            return `<div class="glass p-4 rounded-xl flex justify-between items-center mb-2 border-l-4 border-blue-600"><div><p class="font-black text-white text-xs uppercase">${r.nombre}</p><p class="text-[9px] text-slate-500">${new Date(r.timestamp).toLocaleString()}</p></div><span class="text-lg font-black text-white">${r.score}/20</span></div>`;
+                        }).join('');
+                    });
+                }
+            } else {
+                document.getElementById('view-edit').classList.remove('hidden');
+                renderEditor();
+            }
+        }
+        function renderEditor() {
+            document.getElementById('edit-list').innerHTML = questions.map((q, i) => `
+                <div class="glass p-4 rounded-xl space-y-2">
+                    <div class="flex justify-between"><span class="text-[10px] font-black text-blue-500">P #${q.id}</span>
+                    <select onchange="questions[${i}].correct=this.value" class="p-1 rounded bg-slate-800 text-[10px]"><option value="a" ${q.correct=='a'?'selected':''}>A</option><option value="b" ${q.correct=='b'?'selected':''}>B</option><option value="c" ${q.correct=='c'?'selected':''}>C</option><option value="d" ${q.correct=='d'?'selected':''}>D</option></select></div>
+                    <textarea onchange="questions[${i}].text=this.value" class="text-xs font-bold bg-black/30">${q.text}</textarea>
+                </div>`).join('');
+        }
+        function saveConfig() {
+            if(db) {
+                db.doc(`artifacts/${appId}/public/data/config/main`).set({ questions })
+                .then(() => alert("Guardado en Nube OK"))
+                .catch(e => alert("Error: " + e.message));
+            }
+        }
+    </script>
+</body>
+</html>
