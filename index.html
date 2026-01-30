@@ -6,7 +6,7 @@
     <title>Airtek Cloud - Sistema de Evaluación</title>
     <script src="https://cdn.tailwindcss.com"></script>
     
-    <!-- FIREBASE COMPAT LIBRARIES -->
+    <!-- FIREBASE LIBRARIES -->
     <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-auth-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore-compat.js"></script>
@@ -15,11 +15,14 @@
         @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;600;800;900&display=swap');
         body { font-family: 'Inter', sans-serif; background-color: #020617; color: #f8fafc; -webkit-tap-highlight-color: transparent; }
         
+        /* ESTILOS DE IMPRESIÓN MEJORADOS */
         @media print {
             .no-print { display: none !important; }
-            body { background: white !important; color: black !important; }
+            body { background: white !important; color: black !important; -webkit-print-color-adjust: exact; }
             #print-report { display: block !important; }
-            .card-border { border: 1px solid #ccc; padding: 10px; margin-bottom: 5px; border-radius: 5px; break-inside: avoid; }
+            .card-border { border: 1px solid #cbd5e1; padding: 12px; margin-bottom: 8px; border-radius: 6px; break-inside: avoid; }
+            /* Espacio forzado para firmas */
+            .signature-area { margin-top: 150px !important; } 
         }
         #print-report { display: none; }
 
@@ -41,12 +44,12 @@
         <span id="status-text" class="text-[9px] font-black tracking-widest text-slate-400">CONECTANDO...</span>
     </div>
 
-    <!-- UI -->
+    <!-- UI Principal -->
     <div id="app-container" class="min-h-screen pb-20 no-print">
         <header class="p-5 flex justify-between items-center bg-[#020617]/90 sticky top-0 z-50 border-b border-white/5 backdrop-blur-xl">
             <div>
                 <h1 class="text-lg font-black tracking-tighter text-white">AIRTEK <span class="text-blue-500">CLOUD</span></h1>
-                <p class="text-[8px] font-bold text-slate-500 uppercase tracking-widest">Sistema Centralizado v2.1</p>
+                <p class="text-[8px] font-bold text-slate-500 uppercase tracking-widest">Sistema Centralizado v3.0</p>
             </div>
             <button onclick="toggleAdmin()" class="bg-slate-800 p-2.5 rounded-xl border border-slate-700 hover:bg-slate-700 transition-colors">
                 <svg class="w-5 h-5 text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z"/></svg>
@@ -55,7 +58,7 @@
 
         <main class="p-4 max-w-xl mx-auto space-y-6">
             
-            <!-- LOGIN / HOME -->
+            <!-- VISTA 1: HOME -->
             <section id="s-home" class="space-y-4 pt-2">
                 <div class="glass p-6 rounded-[2rem] space-y-5 border-t border-white/10 shadow-2xl">
                     <div class="flex items-center gap-2">
@@ -78,7 +81,7 @@
                 </div>
             </section>
 
-            <!-- EXAMEN -->
+            <!-- VISTA 2: EXAMEN -->
             <section id="s-exam" class="hidden space-y-4">
                 <div class="sticky top-20 z-40 bg-[#020617]/95 py-3 border-b border-white/5 backdrop-blur-md">
                     <div class="flex justify-between text-xs font-bold uppercase text-slate-400 px-2 mb-1">
@@ -89,13 +92,15 @@
                         <div id="bar-prog" class="h-full bg-blue-600 w-0 transition-all duration-300 ease-out"></div>
                     </div>
                 </div>
+                
                 <div id="list-q" class="space-y-5 pb-4"></div>
+
                 <button id="btn-send" onclick="submitData()" class="w-full btn-primary py-5 rounded-2xl font-black text-sm uppercase shadow-xl tracking-wider">
                     Finalizar y Guardar
                 </button>
             </section>
 
-            <!-- RESULTADO -->
+            <!-- VISTA 3: RESULTADO (MODO CIEGO) -->
             <section id="s-result" class="hidden text-center py-8">
                 <div class="glass p-10 rounded-[2.5rem] border border-blue-500/30 mb-6 relative overflow-hidden">
                     <div class="absolute inset-0 bg-blue-600/5 blur-xl"></div>
@@ -103,18 +108,20 @@
                         <div class="w-28 h-28 mx-auto rounded-full bg-[#020617] border-4 border-blue-600 flex items-center justify-center text-5xl font-black text-white mb-4 shadow-[0_0_30px_rgba(37,99,235,0.4)]">
                             <span id="res-score">0</span>
                         </div>
-                        <h2 class="text-2xl font-black text-white uppercase tracking-tight">¡Datos en la Nube!</h2>
-                        <p class="text-slate-400 text-xs mt-2 px-4">La evaluación ha sido sincronizada con el servidor central.</p>
+                        <h2 class="text-2xl font-black text-white uppercase tracking-tight">Evaluación Finalizada</h2>
+                        <p class="text-slate-400 text-xs mt-2 px-4">Tus respuestas han sido enviadas al servidor de Airtek. El supervisor te indicará los pasos a seguir.</p>
                     </div>
                 </div>
-                <div class="grid grid-cols-2 gap-4">
-                    <button onclick="window.print()" class="bg-slate-800 hover:bg-slate-700 text-white p-4 rounded-2xl font-bold text-xs uppercase border border-white/5 transition-all flex flex-col items-center gap-2">Imprimir Reporte</button>
-                    <button onclick="location.reload()" class="bg-blue-600 hover:bg-blue-500 text-white p-4 rounded-2xl font-bold text-xs uppercase shadow-lg shadow-blue-600/20 transition-all flex flex-col items-center gap-2">Siguiente</button>
+                
+                <div class="grid grid-cols-1 gap-4">
+                    <button onclick="location.reload()" class="bg-slate-800 hover:bg-slate-700 text-white p-4 rounded-2xl font-bold text-xs uppercase shadow-lg border border-white/5 transition-all flex flex-col items-center gap-2">
+                        <svg class="w-6 h-6 text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/></svg>
+                        Nueva Evaluación
+                    </button>
                 </div>
-                <div id="res-detail" class="text-left mt-10 space-y-3"></div>
             </section>
 
-            <!-- PANEL ADMIN -->
+            <!-- VISTA 4: ADMIN -->
             <section id="s-admin" class="hidden space-y-4 pt-2">
                 <div class="flex justify-between items-center bg-slate-900 p-4 rounded-2xl border border-slate-800">
                     <div>
@@ -123,44 +130,77 @@
                     </div>
                     <button onclick="exitAdmin()" class="text-red-400 text-[10px] font-bold px-4 py-2 bg-red-500/10 rounded-lg border border-red-500/20 hover:bg-red-500/20 transition-colors">SALIR</button>
                 </div>
+
                 <div class="flex gap-2 p-1.5 bg-slate-900 rounded-xl border border-white/5">
                     <button onclick="viewAdmin('history')" id="tab-hist" class="flex-1 py-2.5 rounded-lg text-[10px] font-black uppercase bg-blue-600 text-white shadow-lg transition-all">Historial</button>
                     <button onclick="viewAdmin('editor')" id="tab-edit" class="flex-1 py-2.5 rounded-lg text-[10px] font-black uppercase text-slate-500 hover:text-white transition-all">Config</button>
                 </div>
-                <div id="view-hist" class="space-y-3 max-h-[60vh] overflow-y-auto pb-10"></div>
-                <div id="view-edit" class="hidden space-y-4 pb-10">
-                    <div class="bg-yellow-500/10 border border-yellow-500/20 p-4 rounded-xl">
-                        <p class="text-[10px] text-yellow-500 font-bold">⚠️ Atención: Los cambios se replican en todos los dispositivos.</p>
+
+                <div id="view-hist" class="space-y-3 max-h-[60vh] overflow-y-auto pb-10">
+                    <div class="text-center py-12">
+                        <div class="loader mb-3 border-slate-600 border-t-blue-500"></div>
+                        <p class="text-[10px] text-slate-500 uppercase tracking-widest">Sincronizando registros...</p>
                     </div>
-                    <button onclick="saveConfig()" class="w-full bg-green-600 hover:bg-green-500 py-3 rounded-xl font-black text-xs uppercase shadow-lg transition-all">Guardar Cambios</button>
+                </div>
+
+                <div id="view-edit" class="hidden space-y-4 pb-10">
+                    <button onclick="saveConfig()" class="w-full bg-green-600 hover:bg-green-500 py-3 rounded-xl font-black text-xs uppercase shadow-lg transition-all">Guardar Configuración</button>
                     <div id="edit-list" class="space-y-4"></div>
                 </div>
             </section>
+
         </main>
     </div>
 
-    <!-- REPORTE PDF -->
-    <div id="print-report" class="p-8">
-        <div style="border-bottom: 3px solid #2563eb; padding-bottom: 20px; margin-bottom: 25px; display: flex; justify-content: space-between;">
-            <div><h1 style="font-size: 24pt; font-weight: 900; color: #2563eb; margin:0;">AIRTEK</h1><p style="font-size: 10pt; font-weight: bold; color: #666; letter-spacing: 1px;">ENERGÍA Y MONITOREO</p></div>
-            <div style="text-align: right;"><h2 style="font-size: 14pt; font-weight: 900; margin:0;">REPORTE TÉCNICO</h2><p id="pr-date" style="font-size: 10pt;"></p></div>
+    <!-- FORMATO DE IMPRESIÓN (OCULTO) -->
+    <div id="print-report" class="p-10 max-w-4xl mx-auto">
+        <!-- Encabezado -->
+        <div style="border-bottom: 3px solid #2563eb; padding-bottom: 20px; margin-bottom: 25px; display: flex; justify-content: space-between; align-items: flex-end;">
+            <div>
+                <h1 style="font-size: 28pt; font-weight: 900; color: #2563eb; margin:0; letter-spacing: -1px;">AIRTEK</h1>
+                <p style="font-size: 10pt; font-weight: bold; color: #64748b; letter-spacing: 2px;">ENERGÍA Y MONITOREO</p>
+            </div>
+            <div style="text-align: right;">
+                <h2 style="font-size: 16pt; font-weight: 900; margin:0; color: #1e293b;">REPORTE TÉCNICO</h2>
+                <p id="pr-date" style="font-size: 11pt; color: #64748b;"></p>
+            </div>
         </div>
-        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 20px; background: #f8fafc; padding: 25px; border-radius: 15px; border: 1px solid #e2e8f0; margin-bottom: 30px;">
-            <div><p style="font-size: 8pt; color: #94a3b8; font-weight: 900; margin-bottom: 5px;">CANDIDATO</p><p id="pr-cand" style="font-size: 12pt; font-weight: 900; text-transform: uppercase;"></p><p id="pr-id" style="font-size: 10pt; font-family: monospace;"></p><p id="pr-job" style="font-size: 10pt; margin-top: 2px;"></p></div>
-            <div style="text-align: right;"><p style="font-size: 8pt; color: #94a3b8; font-weight: 900; margin-bottom: 5px;">SUPERVISOR</p><p id="pr-eval" style="font-size: 12pt; font-weight: 900; text-transform: uppercase;"></p><p style="font-size: 18pt; font-weight: 900; color: #2563eb; margin-top: 10px;">NOTA: <span id="pr-score"></span>/20</p></div>
+
+        <!-- Datos -->
+        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 30px; background: #f8fafc; padding: 25px; border-radius: 12px; border: 1px solid #e2e8f0; margin-bottom: 30px;">
+            <div>
+                <p style="font-size: 8pt; color: #94a3b8; font-weight: 900; margin-bottom: 8px; letter-spacing: 1px;">DATOS DEL CANDIDATO</p>
+                <p id="pr-cand" style="font-size: 14pt; font-weight: 900; text-transform: uppercase; color: #0f172a;"></p>
+                <p id="pr-id" style="font-size: 11pt; font-family: monospace; color: #334155; margin-top: 2px;"></p>
+                <p id="pr-job" style="font-size: 11pt; margin-top: 2px; color: #334155;"></p>
+            </div>
+            <div style="text-align: right;">
+                <p style="font-size: 8pt; color: #94a3b8; font-weight: 900; margin-bottom: 8px; letter-spacing: 1px;">SUPERVISOR</p>
+                <p id="pr-eval" style="font-size: 14pt; font-weight: 900; text-transform: uppercase; color: #0f172a;"></p>
+                <div style="margin-top: 15px; background: #2563eb; color: white; display: inline-block; padding: 5px 15px; border-radius: 6px;">
+                    <span style="font-size: 12pt; font-weight: bold;">NOTA: </span>
+                    <span id="pr-score" style="font-size: 18pt; font-weight: 900;"></span>
+                    <span style="font-size: 12pt;">/20</span>
+                </div>
+            </div>
         </div>
-        <div id="pr-list" style="font-size: 10pt;"></div>
-        <div style="margin-top: 60px; display: grid; grid-template-columns: 1fr 1fr; gap: 60px; text-align: center;">
-            <div style="border-top: 2px solid #000; padding-top: 10px;"><p style="font-size: 8pt; font-weight: 900;">FIRMA DEL CANDIDATO</p></div>
-            <div style="border-top: 2px solid #000; padding-top: 10px;"><p style="font-size: 8pt; font-weight: 900;">FIRMA DEL SUPERVISOR</p></div>
+
+        <!-- Lista de Preguntas -->
+        <div id="pr-list" style="font-size: 10pt; color: #1e293b;"></div>
+
+        <!-- Firmas (ESPACIO AMPLIADO) -->
+        <div class="signature-area" style="margin-top: 150px; display: grid; grid-template-columns: 1fr 1fr; gap: 80px; text-align: center;">
+            <div style="border-top: 2px solid #000; padding-top: 15px;">
+                <p style="font-size: 9pt; font-weight: 900; letter-spacing: 1px;">FIRMA DEL CANDIDATO</p>
+            </div>
+            <div style="border-top: 2px solid #000; padding-top: 15px;">
+                <p style="font-size: 9pt; font-weight: 900; letter-spacing: 1px;">FIRMA Y SELLO DEL SUPERVISOR</p>
+            </div>
         </div>
     </div>
 
     <script>
-        // ==========================================================
-        // CONFIGURACIÓN DE FIREBASE
-        // Sustituye todo el bloque de abajo con lo que copiaste en Firebase Console
-        // ==========================================================
+        // CONFIGURACIÓN FIREBASE PROPORCIONADA
         const firebaseConfig = {
             apiKey: "AIzaSyAQk7SmO2BJQl_Bnx-87Sw07ivn5_17njo",
             authDomain: "airtek-system.firebaseapp.com",
@@ -169,13 +209,13 @@
             messagingSenderId: "721754246724",
             appId: "1:721754246724:web:a38a0b57e3f364d7947611"
         };
-        // ==========================================================
 
         const appId = 'airtek-produccion'; 
         const ADMIN_PASS = "885500";
         let db, auth;
+        let globalHistory = []; // Almacena historial para impresión
 
-        // Preguntas por defecto (Respaldo)
+        // Preguntas (Respaldo)
         let questions = [
             { id: 1, text: "¿Qué se debe tomar en cuenta para calcular la carga conectada en las fuentes Huawei ETP23006?", options: [{id:'a',text:"Carga mostrada en la entrada AC"},{id:'b',text:"Banco cargado, Inversores, Rectificadores y SSU"},{id:'c',text:"Banco descargado, Inversores, Rectificadores y SSU"},{id:'d',text:"Carga mostrada en los inversores"}], correct: 'b' },
             { id: 2, text: "¿Voltaje máximo que puede operar la batería Pylontech US5000 según el manual?", options: [{id:'a',text:"50 V"},{id:'b',text:"48 V"},{id:'c',text:"53.5 V"},{id:'d',text:"51 V"}], correct: 'c' },
@@ -198,11 +238,11 @@
             { id: 19, text: "Si el personal de soporte IP o clientes dedicados informa que una de las fuentes está apagada, ¿cómo se validaría que no están apagados por completo los equipos de redes?", options: [{id:'a',text:"Verificar en Solar Guardian los equipos conectados e informar al supervisor inmediato."},{id:'b',text:"Verificar en el grupo de Telegram todas las alarmas para validar los equipos de redes e informar al grupo de \"eventualidades foráneos\"."},{id:'c',text:"Validar plataforma de inversores / Fuentes e informar al supervisor inmediato de ser necesario."},{id:'d',text:"Nada porque es algo que ocurre normalmente."}], correct: 'c' },
             { id: 20, text: "¿De enviar un evento donde se ve afectado un Nodo por el grupo de Averías Mayores, qué se debe hacer?", options: [{id:'a',text:"Nada"},{id:'b',text:"Verificar los mensajes predeterminados para enviar el que esté acorde a lo reportado y notificar a supervisor."},{id:'c',text:"Informar solo a la dirección sobre la situación"},{id:'d',text:"Informar a Soporte IP"}], correct: 'b' }
         ];
+
         let userAnswers = {};
         
         // --- INICIALIZACIÓN ---
         try {
-            if(!firebaseConfig.apiKey) throw new Error("Configura Firebase primero");
             firebase.initializeApp(firebaseConfig);
             db = firebase.firestore();
             auth = firebase.auth();
@@ -214,21 +254,21 @@
                 if(user) {
                     statusDot.className = "w-2 h-2 rounded-full bg-green-500 shadow-[0_0_10px_rgba(34,197,94,0.5)]";
                     statusText.textContent = "EN LÍNEA";
-                    // Cargar preguntas desde la nube
+                    // Cargar preguntas
                     db.doc(`artifacts/${appId}/public/data/config/main`).get()
                     .then(doc => { if(doc.exists() && doc.data().questions) questions = doc.data().questions; })
-                    .catch(e => console.log("Usando local"));
+                    .catch(e => console.log("Usando configuración local"));
                 } else {
                     auth.signInAnonymously().catch(e => console.error(e));
                 }
             });
         } catch(e) {
-            console.warn("Modo sin conexión o sin configuración");
+            console.warn("Modo Offline");
             document.getElementById('status-dot').className = "w-2 h-2 rounded-full bg-red-500";
             document.getElementById('status-text').textContent = "OFFLINE";
         }
 
-        // --- FUNCIONES UI ---
+        // --- UI ---
         function startApp() {
             if(!document.getElementById('in-name').value) return alert("Faltan datos");
             document.getElementById('s-home').classList.add('hidden');
@@ -270,7 +310,7 @@
         }
 
         function submitData() {
-            if (Object.keys(userAnswers).length < questions.length && !confirm("Faltan preguntas. ¿Enviar?")) return;
+            if (Object.keys(userAnswers).length < questions.length && !confirm("Faltan preguntas. ¿Enviar igual?")) return;
             const btn = document.getElementById('btn-send');
             btn.disabled = true; btn.innerText = "GUARDANDO...";
             
@@ -287,38 +327,20 @@
 
             if(db) {
                 db.collection(`artifacts/${appId}/public/data/results`).add(payload)
-                .then(() => showResult(score, payload))
+                .then(() => showResultScreen(score))
                 .catch(e => { alert("Error nube: " + e.message); btn.disabled = false; btn.innerText = "REINTENTAR"; });
             } else {
-                alert("Sin conexión a base de datos. No se guardará el historial global.");
-                showResult(score, payload);
+                alert("Sin conexión. No se guardó.");
+                showResultScreen(score);
             }
         }
 
-        function showResult(score, data) {
+        // Muestra la pantalla "Ciega" al estudiante
+        function showResultScreen(score) {
             document.getElementById('s-exam').classList.add('hidden');
             document.getElementById('s-result').classList.remove('hidden');
             document.getElementById('res-score').innerText = score;
-            document.getElementById('res-detail').innerHTML = questions.map((q,i) => {
-                const ok = userAnswers[q.id] === q.correct;
-                return `<div class="p-3 rounded-lg border ${ok?'border-green-500/30 bg-green-900/10':'border-red-500/30 bg-red-900/10'} text-xs">
-                    <p class="font-bold text-slate-300 mb-1"><span class="${ok?'text-green-500':'text-red-500'}">#${i+1}</span> ${q.text}</p>
-                    <p class="text-slate-500">R: <span class="${ok?'text-green-400':'text-red-400'} font-bold">${q.options.find(o=>o.id===userAnswers[q.id])?.text || '---'}</span></p>
-                    ${!ok ? `<p class="text-green-600 font-bold mt-1 text-[10px]">Correcta: ${q.options.find(o=>o.id===q.correct).text}</p>` : ''}
-                </div>`;
-            }).join('');
-            
-            // Llenar Reporte
-            document.getElementById('pr-date').innerText = new Date().toLocaleDateString();
-            document.getElementById('pr-cand').innerText = data.nombre;
-            document.getElementById('pr-id').innerText = data.cedula;
-            document.getElementById('pr-job').innerText = data.cargo;
-            document.getElementById('pr-eval').innerText = data.evaluador;
-            document.getElementById('pr-score').innerText = score;
-            document.getElementById('pr-list').innerHTML = questions.map((q,i) => {
-                const ok = userAnswers[q.id] === q.correct;
-                return `<div class="card-border"><p><strong>${i+1}. ${q.text}</strong></p><p style="color:${ok?'green':'red'}">R: ${q.options.find(o=>o.id===userAnswers[q.id])?.text||'---'}</p></div>`;
-            }).join('');
+            // NOTA: Aquí ya NO generamos el detalle de respuestas para el estudiante.
         }
 
         // --- ADMIN ---
@@ -342,10 +364,25 @@
                 document.getElementById('view-hist').classList.remove('hidden');
                 if(db) {
                     db.collection(`artifacts/${appId}/public/data/results`).orderBy('timestamp', 'desc').onSnapshot(snap => {
-                        document.getElementById('view-hist').innerHTML = snap.docs.map(d => {
-                            const r = d.data();
-                            return `<div class="glass p-4 rounded-xl flex justify-between items-center mb-2 border-l-4 border-blue-600"><div><p class="font-black text-white text-xs uppercase">${r.nombre}</p><p class="text-[9px] text-slate-500">${new Date(r.timestamp).toLocaleString()}</p></div><span class="text-lg font-black text-white">${r.score}/20</span></div>`;
-                        }).join('');
+                        const list = document.getElementById('view-hist');
+                        if (snap.empty) { list.innerHTML = '<p class="text-center text-xs text-slate-600">Sin datos</p>'; return; }
+                        
+                        // Guardamos datos en memoria para poder imprimir
+                        globalHistory = snap.docs.map(d => ({id: d.id, ...d.data()}));
+
+                        list.innerHTML = globalHistory.map(r => `
+                        <div class="glass p-4 rounded-xl flex justify-between items-center mb-2 border-l-4 border-blue-600">
+                            <div>
+                                <p class="font-black text-white text-xs uppercase">${r.nombre}</p>
+                                <p class="text-[9px] text-slate-500">${new Date(r.timestamp).toLocaleString()}</p>
+                            </div>
+                            <div class="flex items-center gap-3">
+                                <span class="text-lg font-black text-white">${r.score}/20</span>
+                                <button onclick="printFromHistory('${r.id}')" class="bg-slate-700 p-2 rounded-lg hover:bg-slate-600 border border-slate-600" title="Imprimir Reporte">
+                                    <svg class="w-4 h-4 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 17h2a2 2 0 002-2v-4a2 2 0 00-2-2H5a2 2 0 00-2 2v4a2 2 0 002 2h2m2 4h6a2 2 0 002-2v-4a2 2 0 00-2-2H9a2 2 0 00-2 2v4a2 2 0 002 2zm8-12V5a2 2 0 00-2-2H9a2 2 0 00-2 2v4h10z"/></svg>
+                                </button>
+                            </div>
+                        </div>`).join('');
                     });
                 }
             } else {
@@ -353,6 +390,37 @@
                 renderEditor();
             }
         }
+
+        // FUNCIÓN PARA IMPRIMIR DESDE EL HISTORIAL
+        function printFromHistory(docId) {
+            const data = globalHistory.find(item => item.id === docId);
+            if (!data) return alert("Error al cargar datos");
+
+            // Llenar Reporte Oculto
+            document.getElementById('pr-date').innerText = new Date(data.timestamp).toLocaleDateString();
+            document.getElementById('pr-cand').innerText = data.nombre;
+            document.getElementById('pr-id').innerText = data.cedula;
+            document.getElementById('pr-job').innerText = data.cargo;
+            document.getElementById('pr-eval').innerText = data.evaluador;
+            document.getElementById('pr-score').innerText = data.score;
+            
+            // Reconstruir respuestas
+            document.getElementById('pr-list').innerHTML = questions.map((q,i) => {
+                const answerId = data.respuestas[q.id];
+                const ok = answerId === q.correct;
+                const answerText = q.options.find(o=>o.id===answerId)?.text || '---';
+                
+                return `<div class="card-border">
+                    <p><strong>${i+1}. ${q.text}</strong></p>
+                    <p style="color:${ok?'green':'red'}">R: ${answerText}</p>
+                    ${!ok ? `<p style="font-size:8pt;color:green;margin-top:2px;">Correcta: ${q.options.find(o=>o.id===q.correct).text}</p>` : ''}
+                </div>`;
+            }).join('');
+
+            // Ejecutar impresión
+            window.print();
+        }
+
         function renderEditor() {
             document.getElementById('edit-list').innerHTML = questions.map((q, i) => `
                 <div class="glass p-4 rounded-xl space-y-2">
